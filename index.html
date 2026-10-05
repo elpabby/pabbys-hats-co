@@ -39,9 +39,36 @@
 :focus-visible{outline:2px solid var(--green);outline-offset:2px}.btn:disabled{opacity:.6;cursor:wait}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:#0d18206b;z-index:15}
 @media(max-width:760px){.menu-toggle{display:block}.sidebar{position:fixed;top:0;bottom:0;transform:translateX(-100%);width:250px;z-index:20}.sidebar.open{transform:none}.sidebar-overlay.show{display:block}.main{margin-left:0;padding:66px 16px 30px}}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse 900px 650px at 50% 15%,#1f3d28,var(--sidebar) 55%,#050505 100%);padding:20px}
+.login-card{width:100%;max-width:440px;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.35);border-radius:22px;padding:48px 44px 40px;box-shadow:0 25px 70px -15px #0b2b1799,0 0 0 1px #ffffff14}
+.login-logo{display:flex;justify-content:center;margin-bottom:10px}
+.login-logo img{width:170px;height:132px;object-fit:contain;filter:drop-shadow(0 8px 18px #0d182033)}
+.login-card p{color:var(--text2);margin:0 0 28px;font-size:14px;text-align:center}
+.login-card .field{margin-bottom:18px}
+.login-card .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:7px}
+.login-card .field input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px}
+.login-card button[type=submit]{padding:13px 14px;font-size:14px;border-radius:10px;margin-top:4px;width:100%}
+.password-field{position:relative}
+.password-field input{padding-right:40px!important}
+.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:transparent;border:0;padding:8px;color:var(--muted);display:flex}
+.password-toggle svg{width:19px;height:19px}
+.login-error{color:var(--red);font-size:12.5px;margin:-6px 0 14px;min-height:16px}
+.logout-btn{background:transparent;border:0;color:#67716c;font-size:11.5px;padding:0;margin-left:auto;cursor:pointer;text-decoration:underline}
+.app-hidden{display:none}
 </style>
 </head>
 <body>
+<div id="loginScreen" class="login-screen">
+  <form class="login-card" onsubmit="doLogin(event)">
+    <div class="login-logo"><img src="https://ixkcxirrvxeqlzzjmflc.supabase.co/storage/v1/object/public/branding/pabbys-logo.webp.png" alt="Pabbys Hats Co."></div>
+    <p>Inicia sesión para entrar al sistema.</p>
+    <div class="field"><label>Correo</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+    <div class="field"><label>Contraseña</label><div class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" required><button type="button" class="password-toggle" onclick="togglePasswordVisibility()" aria-label="Mostrar contraseña"><svg id="pwEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+    <div id="loginError" class="login-error"></div>
+    <button type="submit" class="btn primary" id="loginBtn">Entrar</button>
+  </form>
+</div>
+<div id="appShell" class="app-hidden">
 <button class="menu-toggle" onclick="toggleMenu()" aria-label="Abrir menú">☰</button>
 <div class="sidebar-overlay" onclick="toggleMenu()"></div>
 <aside class="sidebar">
@@ -58,8 +85,8 @@
     <div class="menu-item" onclick="nav('Pedidos',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18H6z"/><path d="M9 3v-1h6v1M9 8h6M9 12h6"/><path d="m9 16 1.5 1.5L14 14"/></svg>Pedidos</div>
     <div class="menu-item" onclick="nav('Pagos',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/><path d="M16 14v4M14 16h4"/></svg>Pagos pendientes</div>
     <div class="menu-item" onclick="nav('Proveedores',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="1.8"/><circle cx="18" cy="19" r="1.8"/><path d="M17 10V7h-3"/></svg>Proveedores</div>
-  </div>div>
-  <div class="sidebar-footer">Sistema activo · Pabbys Hats Co.</div>
+  </div>
+  <div class="sidebar-footer">Sistema activo · Pabbys Hats Co.<button class="logout-btn" onclick="doLogout()">Cerrar sesión</button></div>
 </aside>
 
 <main class="main">
@@ -156,6 +183,7 @@
 
 <div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="modal-box"><div id="modalContent"></div></div></div>
 <div id="toast" class="toast"></div>
+</div>
 
 <script>
 const SUPABASE_URL="https://ixkcxirrvxeqlzzjmflc.supabase.co";
@@ -458,7 +486,12 @@ function once(fn){return async(...a)=>{if(window._busy)return;window._busy=true;
 saveSale=once(saveSale);savePurchase=once(savePurchase);saveProduct=once(saveProduct);saveInsumo=once(saveInsumo);saveClient=once(saveClient);saveSupplier=once(saveSupplier);saveCash=once(saveCash);savePayment=once(savePayment);
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
 document.querySelectorAll(".menu-item").forEach(x=>{x.tabIndex=0;x.setAttribute("role","button");x.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();x.click()}})});
-loadHome();
+async function showApp(){$('loginScreen').classList.add('app-hidden');$('appShell').classList.remove('app-hidden');await loadHome()}
+function showLogin(msg){$('appShell').classList.add('app-hidden');$('loginScreen').classList.remove('app-hidden');$('loginError').textContent=msg||''}
+function togglePasswordVisibility(){let i=$('loginPassword'),icon=$('pwEyeIcon');if(i.type==='password'){i.type='text';icon.innerHTML='<path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 7 11 7a13.2 13.2 0 0 1-3.17 3.86M6.1 6.1A13.1 13.1 0 0 0 1 11s4 7 11 7a10.8 10.8 0 0 0 5-1.2"/>'}else{i.type='password';icon.innerHTML='<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/>'}}
+async function doLogin(ev){ev.preventDefault();let btn=$('loginBtn');btn.disabled=true;$('loginError').textContent='';try{let r=await db.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(r.error)throw r.error;await showApp()}catch(e){$('loginError').textContent='Correo o contraseña incorrectos.'}finally{btn.disabled=false}}
+async function doLogout(){await db.auth.signOut();showLogin()}
+(async function initAuth(){let r=await db.auth.getSession();if(r.data?.session)await showApp();else showLogin();db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT')showLogin()})})();
 </script>
 </body>
 </html>
